@@ -20,7 +20,7 @@ from opentelemetry.instrumentation.django.version import __version__
 from opentelemetry.instrumentation.utils import extract_attributes_from_object
 from opentelemetry.instrumentation.wsgi import (
     add_response_attributes,
-    collect_request_attributes,
+    collect_request_attributes as wsgi_collect_request_attributes,
     wsgi_getter,
 )
 from opentelemetry.propagate import extract
@@ -39,6 +39,25 @@ try:
     from django.utils.deprecation import MiddlewareMixin
 except ImportError:
     MiddlewareMixin = object
+
+try:
+    from django.core.handlers.asgi import ASGIRequest
+except ImportError:
+    ASGIRequest = None
+
+try:
+    from opentelemetry.instrumentation.asgi import (
+        asgi_getter,
+        collect_request_attributes as asgi_collect_request_attributes,
+        set_status_code,
+    )
+    _is_asgi_supported = True
+except ImportError:
+    asgi_getter = None
+    asgi_collect_request_attributes = None
+    set_status_code = None
+    _is_asgi_supported = False
+
 
 _logger = getLogger(__name__)
 _attributes_by_preference = [
@@ -84,6 +103,9 @@ class _DjangoMiddleware(MiddlewareMixin):
         except Resolver404:
             return "HTTP {}".format(request.method)
 
+    def _is_asgi_request(self, request):
+        return ASGIRequest and isinstance(request, ASGIRequest)
+
     def process_request(self, request):
         # request.META is a dictionary containing all available HTTP headers
         # Read more about request.META here:
@@ -92,12 +114,23 @@ class _DjangoMiddleware(MiddlewareMixin):
         if self._excluded_urls.url_disabled(request.build_absolute_uri("?")):
             return
 
+        is_asgi_request = self._is_asgi_request(request)
+        if is_asgi_request and not _is_asgi_supported:
+            return
+
         # pylint:disable=W0212
         request._otel_start_time = time()
 
         request_meta = request.META
 
-        token = attach(extract(request_meta, getter=wsgi_getter))
+        if is_asgi_request:
+            carrier_getter = asgi_getter
+            collect_request_attributes = asgi_collect_request_attributes
+        else:
+            carrier_getter = wsgi_getter
+            collect_request_attributes = wsgi_collect_request_attributes
+
+        token = attach(extract(request_meta, getter=carrier_getter))
 
         tracer = get_tracer(__name__, __version__)
 
@@ -156,15 +189,22 @@ class _DjangoMiddleware(MiddlewareMixin):
         if self._excluded_urls.url_disabled(request.build_absolute_uri("?")):
             return response
 
+        is_asgi_request = self._is_asgi_request(request)
+        if is_asgi_request and not _is_asgi_supported:
+            return
+
         if (
             self._environ_activation_key in request.META.keys()
             and self._environ_span_key in request.META.keys()
         ):
-            add_response_attributes(
-                request.META[self._environ_span_key],
-                "{} {}".format(response.status_code, response.reason_phrase),
-                response,
-            )
+            if is_asgi_request:
+                set_status_code(request.META[self._environ_span_key], response.status_code)
+            else:
+                add_response_attributes(
+                    request.META[self._environ_span_key],
+                    "{} {}".format(response.status_code, response.reason_phrase),
+                    response,
+                )
 
             request.META.pop(self._environ_span_key)
 
@@ -182,7 +222,10 @@ class _DjangoMiddleware(MiddlewareMixin):
             request.META.pop(self._environ_activation_key)
 
         if self._environ_token in request.META.keys():
-            detach(request.environ.get(self._environ_token))
+            if is_asgi_request:
+                detach(request.META.get(self._environ_token))
+            else:
+                detach(request.environ.get(self._environ_token))
             request.META.pop(self._environ_token)
 
         return response
