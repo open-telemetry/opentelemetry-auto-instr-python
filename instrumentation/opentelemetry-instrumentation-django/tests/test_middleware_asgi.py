@@ -16,42 +16,49 @@ from sys import modules
 from unittest.mock import Mock, patch
 
 from django import VERSION, conf
-from django.test.client import Client
+from django.test import SimpleTestCase
 from django.test.utils import setup_test_environment, teardown_test_environment
 from django.urls import re_path
+import pytest
 
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.test.test_base import TestBase
-from opentelemetry.test.wsgitestutil import WsgiTestBase
 from opentelemetry.trace import SpanKind, StatusCode
 from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
 
 # pylint: disable=import-error
 from .views import (
-    error,
-    excluded,
-    excluded_noarg,
-    excluded_noarg2,
-    route_span_name,
-    traced,
-    traced_template,
+    async_error,
+    async_excluded,
+    async_excluded_noarg,
+    async_excluded_noarg2,
+    async_route_span_name,
+    async_traced,
+    async_traced_template,
 )
 
-DJANGO_2_2 = VERSION >= (2, 2)
+DJANGO_3_1 = VERSION >= (3, 1)
+
+if DJANGO_3_1:
+    from django.test.client import AsyncClient
+else:
+    AsyncClient = None
 
 urlpatterns = [
-    re_path(r"^traced/", traced),
-    re_path(r"^route/(?P<year>[0-9]{4})/template/$", traced_template),
-    re_path(r"^error/", error),
-    re_path(r"^excluded_arg/", excluded),
-    re_path(r"^excluded_noarg/", excluded_noarg),
-    re_path(r"^excluded_noarg2/", excluded_noarg2),
-    re_path(r"^span_name/([0-9]{4})/$", route_span_name),
+    re_path(r"^traced/", async_traced),
+    re_path(r"^route/(?P<year>[0-9]{4})/template/$", async_traced_template),
+    re_path(r"^error/", async_error),
+    re_path(r"^excluded_arg/", async_excluded),
+    re_path(r"^excluded_noarg/", async_excluded_noarg),
+    re_path(r"^excluded_noarg2/", async_excluded_noarg2),
+    re_path(r"^span_name/([0-9]{4})/$", async_route_span_name),
 ]
 _django_instrumentor = DjangoInstrumentor()
 
 
-class TestMiddleware(TestBase, WsgiTestBase):
+@pytest.mark.skipif(not DJANGO_3_1, reason="AsyncClient implemented since Django 3.1")
+class TestMiddlewareAsgi(SimpleTestCase, TestBase):
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -93,20 +100,26 @@ class TestMiddleware(TestBase, WsgiTestBase):
         super().tearDownClass()
         conf.settings = conf.LazySettings()
 
-    def test_templated_route_get(self):
-        Client().get("/route/2020/template/")
+    @classmethod
+    def _add_databases_failures(cls):
+        # Disable databases.
+        pass
+
+    @classmethod
+    def _remove_databases_failures(cls):
+        # Disable databases.
+        pass
+
+    @pytest.mark.skip(reason="TODO")
+    async def test_templated_route_get(self):
+        await self.async_client.get("/route/2020/template/")
 
         spans = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
 
         span = spans[0]
 
-        self.assertEqual(
-            span.name,
-            "^route/(?P<year>[0-9]{4})/template/$"
-            if DJANGO_2_2
-            else "tests.views.traced",
-        )
+        self.assertEqual(span.name, "^route/(?P<year>[0-9]{4})/template/$")
         self.assertEqual(span.kind, SpanKind.SERVER)
         self.assertEqual(span.status.status_code, StatusCode.UNSET)
         self.assertEqual(span.attributes["http.method"], "GET")
@@ -122,17 +135,16 @@ class TestMiddleware(TestBase, WsgiTestBase):
         self.assertEqual(span.attributes["http.status_code"], 200)
         self.assertEqual(span.attributes["http.status_text"], "OK")
 
-    def test_traced_get(self):
-        Client().get("/traced/")
+    @pytest.mark.skip(reason="TODO")
+    async def test_traced_get(self):
+        await self.async_client.get("/traced/")
 
         spans = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
 
         span = spans[0]
 
-        self.assertEqual(
-            span.name, "^traced/" if DJANGO_2_2 else "tests.views.traced"
-        )
+        self.assertEqual(span.name, "^traced/")
         self.assertEqual(span.kind, SpanKind.SERVER)
         self.assertEqual(span.status.status_code, StatusCode.UNSET)
         self.assertEqual(span.attributes["http.method"], "GET")
@@ -144,30 +156,29 @@ class TestMiddleware(TestBase, WsgiTestBase):
         self.assertEqual(span.attributes["http.status_code"], 200)
         self.assertEqual(span.attributes["http.status_text"], "OK")
 
-    def test_not_recording(self):
+    async def test_not_recording(self):
         mock_tracer = Mock()
         mock_span = Mock()
         mock_span.is_recording.return_value = False
         mock_tracer.start_span.return_value = mock_span
         with patch("opentelemetry.trace.get_tracer") as tracer:
             tracer.return_value = mock_tracer
-            Client().get("/traced/")
+            await self.async_client.get("/traced/")
             self.assertFalse(mock_span.is_recording())
             self.assertTrue(mock_span.is_recording.called)
             self.assertFalse(mock_span.set_attribute.called)
             self.assertFalse(mock_span.set_status.called)
 
-    def test_traced_post(self):
-        Client().post("/traced/")
+    @pytest.mark.skip(reason="TODO")
+    async def test_traced_post(self):
+        await self.async_client.post("/traced/")
 
         spans = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
 
         span = spans[0]
 
-        self.assertEqual(
-            span.name, "^traced/" if DJANGO_2_2 else "tests.views.traced"
-        )
+        self.assertEqual(span.name, "^traced/")
         self.assertEqual(span.kind, SpanKind.SERVER)
         self.assertEqual(span.status.status_code, StatusCode.UNSET)
         self.assertEqual(span.attributes["http.method"], "POST")
@@ -179,18 +190,17 @@ class TestMiddleware(TestBase, WsgiTestBase):
         self.assertEqual(span.attributes["http.status_code"], 200)
         self.assertEqual(span.attributes["http.status_text"], "OK")
 
-    def test_error(self):
+    @pytest.mark.skip(reason="TODO")
+    async def test_error(self):
         with self.assertRaises(ValueError):
-            Client().get("/error/")
+            await self.async_client.get("/error/")
 
         spans = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
 
         span = spans[0]
 
-        self.assertEqual(
-            span.name, "^error/" if DJANGO_2_2 else "tests.views.error"
-        )
+        self.assertEqual(span.name, "^error/")
         self.assertEqual(span.kind, SpanKind.SERVER)
         self.assertEqual(span.status.status_code, StatusCode.ERROR)
         self.assertEqual(span.attributes["http.method"], "GET")
@@ -207,64 +217,54 @@ class TestMiddleware(TestBase, WsgiTestBase):
         self.assertEqual(event.attributes["exception.type"], "ValueError")
         self.assertEqual(event.attributes["exception.message"], "error")
 
-    def test_exclude_lists(self):
-        client = Client()
-        client.get("/excluded_arg/123")
+    async def test_exclude_lists(self):
+        await self.async_client.get("/excluded_arg/123")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 0)
 
-        client.get("/excluded_arg/125")
+        await self.async_client.get("/excluded_arg/125")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
-        client.get("/excluded_noarg/")
+        await self.async_client.get("/excluded_noarg/")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
-        client.get("/excluded_noarg2/")
+        await self.async_client.get("/excluded_noarg2/")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
-    def test_span_name(self):
+    async def test_span_name(self):
         # test no query_string
-        Client().get("/span_name/1234/")
+        await self.async_client.get("/span_name/1234/")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
         span = span_list[0]
-        self.assertEqual(
-            span.name,
-            "^span_name/([0-9]{4})/$"
-            if DJANGO_2_2
-            else "tests.views.route_span_name",
-        )
+        self.assertEqual(span.name, "^span_name/([0-9]{4})/$")
 
-    def test_span_name_for_query_string(self):
+    async def test_span_name_for_query_string(self):
         """
         request not have query string
         """
-        Client().get("/span_name/1234/?query=test")
+        await self.async_client.get("/span_name/1234/?query=test")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
         span = span_list[0]
-        self.assertEqual(
-            span.name,
-            "^span_name/([0-9]{4})/$"
-            if DJANGO_2_2
-            else "tests.views.route_span_name",
-        )
+        self.assertEqual(span.name, "^span_name/([0-9]{4})/$")
 
-    def test_span_name_404(self):
-        Client().get("/span_name/1234567890/")
+    async def test_span_name_404(self):
+        await self.async_client.get("/span_name/1234567890/")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
         span = span_list[0]
         self.assertEqual(span.name, "HTTP GET")
 
-    def test_traced_request_attrs(self):
-        Client().get("/span_name/1234/", CONTENT_TYPE="test/ct")
+    @pytest.mark.skip(reason="TODO")
+    async def test_traced_request_attrs(self):
+        await self.async_client.get("/span_name/1234/", CONTENT_TYPE="test/ct")
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
 
