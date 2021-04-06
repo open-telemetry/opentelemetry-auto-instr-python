@@ -51,6 +51,7 @@ try:
         collect_request_attributes as asgi_collect_request_attributes,
         set_status_code,
     )
+
     _is_asgi_supported = True
 except ImportError:
     asgi_getter = None
@@ -201,11 +202,15 @@ class _DjangoMiddleware(MiddlewareMixin):
             and self._environ_span_key in request.META.keys()
         ):
             if is_asgi_request:
-                set_status_code(request.META[self._environ_span_key], response.status_code)
+                set_status_code(
+                    request.META[self._environ_span_key], response.status_code
+                )
             else:
                 add_response_attributes(
                     request.META[self._environ_span_key],
-                    "{} {}".format(response.status_code, response.reason_phrase),
+                    "{} {}".format(
+                        response.status_code, response.reason_phrase
+                    ),
                     response,
                 )
 
