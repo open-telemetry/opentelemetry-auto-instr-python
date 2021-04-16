@@ -47,6 +47,7 @@ API
 """
 
 import logging
+import json
 
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError
@@ -109,6 +110,15 @@ class BotocoreInstrumentor(BaseInstrumentor):
 
         error = None
         result = None
+
+        # inject trace context into payload headers for lambda Invoke
+        if service_name == 'lambda' and operation_name == 'Invoke' and 'Payload' in api_params:
+            payload_str = api_params['Payload']
+            headers = {}
+            inject(headers)
+            payload = json.loads(payload_str)
+            payload['headers'] = headers
+            api_params['Payload'] = json.dumps(payload)
 
         with self._tracer.start_as_current_span(
             "{}".format(service_name), kind=SpanKind.CLIENT,
