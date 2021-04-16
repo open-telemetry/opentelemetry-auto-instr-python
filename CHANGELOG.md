@@ -34,7 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([#415](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/415))
 - `opentelemetry-instrumentation-tornado` Add request/response hooks.
   ([#426](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/426))
-
+- `opentelemetry-instrumentation-botocore` now supports
+  context propagation for lambda invoke via Payload embedded headers. 
+  ([#458](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/458))
+ 
 ### Removed
 - Remove `http.status_text` from span attributes
   ([#406](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/406))
