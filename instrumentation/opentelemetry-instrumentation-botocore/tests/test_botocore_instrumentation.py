@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import io
+import json
 import zipfile
-
 from unittest.mock import Mock, patch
 
 import botocore.session
@@ -22,6 +21,7 @@ from botocore.exceptions import ParamValidationError
 from moto import (  # pylint: disable=import-error
     mock_dynamodb2,
     mock_ec2,
+    mock_iam,
     mock_kinesis,
     mock_kms,
     mock_lambda,
@@ -29,7 +29,6 @@ from moto import (  # pylint: disable=import-error
     mock_sqs,
     mock_sts,
     mock_xray,
-    mock_iam
 )
 
 from opentelemetry import trace as trace_api
@@ -366,13 +365,17 @@ class TestBotocoreInstrumentor(TestBase):
         try:
             set_global_textmap(MockTextMapPropagator())
 
-            lamb = self.session.create_client("lambda", region_name="us-east-1")
+            lamb = self.session.create_client(
+                "lambda", region_name="us-east-1"
+            )
             lamb.create_function(
                 FunctionName="testFunction",
                 Runtime="python2.7",
                 Role=self.get_role_name(),
                 Handler="lambda_function.lambda_handler",
-                Code={"ZipFile": get_as_zip_bytes(return_headers_lambda_str())},
+                Code={
+                    "ZipFile": get_as_zip_bytes(return_headers_lambda_str())
+                },
                 Description="test lambda function",
                 Timeout=3,
                 MemorySize=128,
@@ -380,26 +383,24 @@ class TestBotocoreInstrumentor(TestBase):
             )
             response = lamb.invoke(
                 Payload=json.dumps({}),
-                FunctionName='testFunction',
-                InvocationType='RequestResponse'
+                FunctionName="testFunction",
+                InvocationType="RequestResponse",
             )
 
             spans = self.memory_exporter.get_finished_spans()
             assert spans
             self.assertEqual(len(spans), 3)
 
-            results = response['Payload'].read().decode('utf-8')
+            results = response["Payload"].read().decode("utf-8")
             headers = json.loads(results)
 
             self.assertIn(MockTextMapPropagator.TRACE_ID_KEY, headers)
             self.assertEqual(
-                "0",
-                headers[MockTextMapPropagator.TRACE_ID_KEY],
+                "0", headers[MockTextMapPropagator.TRACE_ID_KEY],
             )
             self.assertIn(MockTextMapPropagator.SPAN_ID_KEY, headers)
             self.assertEqual(
-                "0",
-                headers[MockTextMapPropagator.SPAN_ID_KEY],
+                "0", headers[MockTextMapPropagator.SPAN_ID_KEY],
             )
         finally:
             set_global_textmap(previous_propagator)
