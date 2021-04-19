@@ -39,10 +39,10 @@ from opentelemetry.test.mock_textmap import MockTextMapPropagator
 from opentelemetry.test.test_base import TestBase
 
 
-def get_as_zip_bytes(func_str):
+def get_as_zip_file(file_name, content):
     zip_output = io.BytesIO()
     zip_file = zipfile.ZipFile(zip_output, "w", zipfile.ZIP_DEFLATED)
-    zip_file.writestr("lambda_function.py", func_str)
+    zip_file.writestr(file_name, content)
     zip_file.close()
     zip_output.seek(0)
     return zip_output.read()
@@ -374,7 +374,9 @@ class TestBotocoreInstrumentor(TestBase):
                 Role=self.get_role_name(),
                 Handler="lambda_function.lambda_handler",
                 Code={
-                    "ZipFile": get_as_zip_bytes(return_headers_lambda_str())
+                    "ZipFile": get_as_zip_file(
+                        "lambda_function.py", return_headers_lambda_str()
+                    )
                 },
                 Description="test lambda function",
                 Timeout=3,

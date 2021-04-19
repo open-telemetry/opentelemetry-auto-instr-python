@@ -118,9 +118,9 @@ class BotocoreInstrumentor(BaseInstrumentor):
             and "Payload" in api_params
         ):
             payload_str = api_params["Payload"]
-            headers = {}
-            inject(headers)
             payload = json.loads(payload_str)
+            headers = payload.get("headers", {})
+            inject(headers)
             payload["headers"] = headers
             api_params["Payload"] = json.dumps(payload)
 
