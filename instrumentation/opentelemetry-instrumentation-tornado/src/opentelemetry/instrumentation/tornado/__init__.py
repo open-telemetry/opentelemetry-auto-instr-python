@@ -76,6 +76,7 @@ API
 from collections import namedtuple
 from functools import partial
 from logging import getLogger
+from typing import Collection
 
 import tornado.web
 import wrapt
@@ -99,6 +100,7 @@ from opentelemetry.trace.status import Status
 from opentelemetry.util._time import _time_ns
 from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
 
+from . import package as pkg
 from .client import fetch_async  # pylint: disable=E0401
 
 _logger = getLogger(__name__)
@@ -116,6 +118,9 @@ response_propagation_setter = FuncSetter(tornado.web.RequestHandler.add_header)
 class TornadoInstrumentor(BaseInstrumentor):
     patched_handlers = []
     original_handler_new = None
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """

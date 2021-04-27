@@ -64,6 +64,7 @@ API
 
 import types
 import typing
+from typing import Collection
 
 import aiohttp
 import wrapt
@@ -80,6 +81,8 @@ from opentelemetry.propagate import inject
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind, TracerProvider, get_tracer
 from opentelemetry.trace.status import Status, StatusCode
+
+from . import package as pkg
 
 _UrlFilterT = typing.Optional[typing.Callable[[str], str]]
 _SpanNameT = typing.Optional[
@@ -287,6 +290,9 @@ class AioHttpClientInstrumentor(BaseInstrumentor):
 
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Instruments aiohttp ClientSession

@@ -38,6 +38,7 @@ API
 # pylint: disable=no-value-for-parameter
 
 import logging
+from typing import Collection
 
 import pymemcache
 from wrapt import ObjectProxy
@@ -52,6 +53,8 @@ from opentelemetry.semconv.trace import (
     SpanAttributes,
 )
 from opentelemetry.trace import SpanKind, get_tracer
+
+from . import package as pkg
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +183,9 @@ def _get_address_attributes(instance):
 
 class PymemcacheInstrumentor(BaseInstrumentor):
     """An instrumentor for pymemcache See `BaseInstrumentor`"""
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")

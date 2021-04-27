@@ -43,6 +43,7 @@ API
 
 import logging
 from inspect import currentframe
+from typing import Collection
 
 from boto.connection import AWSAuthConnection, AWSQueryConnection
 from wrapt import wrap_function_wrapper
@@ -53,6 +54,8 @@ from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.sdk.trace import Resource
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind, get_tracer
+
+from . import package as pkg
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +81,9 @@ class BotoInstrumentor(BaseInstrumentor):
     def __init__(self):
         super().__init__()
         self._original_boto = None
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         # AWSQueryConnection and AWSAuthConnection are two different classes

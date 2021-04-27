@@ -40,6 +40,7 @@ API
 # pylint: disable=no-value-for-parameter
 
 import logging
+from typing import Collection
 
 import jinja2
 from wrapt import ObjectProxy
@@ -50,6 +51,8 @@ from opentelemetry.instrumentation.jinja2.version import __version__
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.trace import SpanKind, get_tracer
 
+from . import package as pkg
+
 logger = logging.getLogger(__name__)
 
 ATTRIBUTE_JINJA2_TEMPLATE_NAME = "jinja2.template_name"
@@ -58,8 +61,7 @@ DEFAULT_TEMPLATE_NAME = "<memory>"
 
 
 def _with_tracer_wrapper(func):
-    """Helper for providing tracer for wrapper functions.
-    """
+    """Helper for providing tracer for wrapper functions."""
 
     def _with_tracer(tracer):
         def wrapper(wrapped, instance, args, kwargs):
@@ -72,8 +74,7 @@ def _with_tracer_wrapper(func):
 
 @_with_tracer_wrapper
 def _wrap_render(tracer, wrapped, instance, args, kwargs):
-    """Wrap `Template.render()` or `Template.generate()`
-    """
+    """Wrap `Template.render()` or `Template.generate()`"""
     with tracer.start_as_current_span(
         "jinja2.render", kind=SpanKind.INTERNAL,
     ) as span:
@@ -122,6 +123,9 @@ class Jinja2Instrumentor(BaseInstrumentor):
 
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")

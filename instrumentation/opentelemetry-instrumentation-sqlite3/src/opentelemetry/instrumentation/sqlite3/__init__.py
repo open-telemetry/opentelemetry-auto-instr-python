@@ -40,11 +40,14 @@ API
 """
 
 import sqlite3
+from typing import Collection
 
 from opentelemetry.instrumentation import dbapi
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.sqlite3.version import __version__
 from opentelemetry.trace import get_tracer
+
+from . import package as pkg
 
 
 class SQLite3Instrumentor(BaseInstrumentor):
@@ -52,6 +55,9 @@ class SQLite3Instrumentor(BaseInstrumentor):
     _CONNECTION_ATTRIBUTES = {}
 
     _DATABASE_SYSTEM = "sqlite"
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Integrate with SQLite3 Python library.

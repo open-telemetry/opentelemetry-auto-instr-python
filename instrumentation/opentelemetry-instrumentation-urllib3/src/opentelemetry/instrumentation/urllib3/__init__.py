@@ -46,6 +46,7 @@ API
 
 import contextlib
 import typing
+from typing import Collection
 
 import urllib3.connectionpool
 import wrapt
@@ -62,6 +63,8 @@ from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import Span, SpanKind, TracerProvider, get_tracer
 from opentelemetry.trace.status import Status
 
+from . import package as pkg
+
 _SUPPRESS_HTTP_INSTRUMENTATION_KEY = "suppress_http_instrumentation"
 
 _UrlFilterT = typing.Optional[typing.Callable[[str], str]]
@@ -76,6 +79,9 @@ _URL_OPEN_ARG_TO_INDEX_MAPPING = {
 
 
 class URLLib3Instrumentor(BaseInstrumentor):
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
+
     def _instrument(self, **kwargs):
         """Instruments the urllib3 module
 

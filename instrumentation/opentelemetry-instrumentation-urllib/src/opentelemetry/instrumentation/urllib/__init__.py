@@ -38,6 +38,7 @@ API
 
 import functools
 import types
+from typing import Collection
 from urllib.request import (  # pylint: disable=no-name-in-module,import-error
     OpenerDirector,
     Request,
@@ -45,7 +46,7 @@ from urllib.request import (  # pylint: disable=no-name-in-module,import-error
 
 from opentelemetry import context
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.instrumentation.urllib.version import (  # pylint: disable=no-name-in-module,import-error
+from opentelemetry.instrumentation.urllib.package import (  # pylint: disable=no-name-in-module,import-error
     __version__,
 )
 from opentelemetry.instrumentation.utils import http_status_to_status_code
@@ -53,6 +54,8 @@ from opentelemetry.propagate import inject
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind, get_tracer
 from opentelemetry.trace.status import Status
+
+from . import package as pkg
 
 # A key to a context variable to avoid creating duplicate spans when instrumenting
 _SUPPRESS_HTTP_INSTRUMENTATION_KEY = "suppress_http_instrumentation"
@@ -62,6 +65,9 @@ class URLLibInstrumentor(BaseInstrumentor):
     """An instrumentor for urllib
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Instruments urllib module

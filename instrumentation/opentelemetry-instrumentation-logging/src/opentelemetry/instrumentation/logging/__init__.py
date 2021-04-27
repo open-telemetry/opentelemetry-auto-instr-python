@@ -16,7 +16,7 @@
 
 import logging  # pylint: disable=import-self
 from os import environ
-from typing import Callable
+from typing import Callable, Collection
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.logging.constants import (
@@ -34,6 +34,8 @@ from opentelemetry.trace import (
     get_current_span,
     get_tracer_provider,
 )
+
+from . import package as pkg
 
 __doc__ = _MODULE_DOC
 
@@ -72,6 +74,9 @@ class LoggingInstrumentor(BaseInstrumentor):  # pylint: disable=empty-docstring
     )
 
     _old_factory = None
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         service_name = ""
