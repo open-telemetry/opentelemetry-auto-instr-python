@@ -64,6 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([#436](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/436))
 - `opentelemetry-instrumenation-flask` now supports trace response headers.
   ([#436](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/436))
+- `opentelemetry-instrumentation-botocore` now supports
+  context propagation for lambda invoke via Payload embedded headers. 
+  ([#458](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/458))
 
 ### Removed
 - Remove `http.status_text` from span attributes
