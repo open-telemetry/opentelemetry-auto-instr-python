@@ -99,6 +99,27 @@ class BotocoreInstrumentor(BaseInstrumentor):
     def _uninstrument(self, **kwargs):
         unwrap(BaseClient, "_make_api_call")
 
+    @staticmethod
+    def _is_lambda_invoke(service_name, operation_name, api_params):
+        return (
+                service_name == "lambda"
+                and operation_name == "Invoke"
+                and type(api_params) is dict
+                and "Payload" in api_params
+        )
+
+    @staticmethod
+    def _patch_lambda_invoke(api_params):
+        try:
+            payload_str = api_params["Payload"]
+            payload = json.loads(payload_str)
+            headers = payload.get("headers", {})
+            inject(headers)
+            payload["headers"] = headers
+            api_params["Payload"] = json.dumps(payload)
+        except ValueError:
+            pass
+
     # pylint: disable=too-many-branches
     def _patched_api_call(self, original_func, instance, args, kwargs):
         if context_api.get_value("suppress_instrumentation"):
@@ -112,17 +133,10 @@ class BotocoreInstrumentor(BaseInstrumentor):
         result = None
 
         # inject trace context into payload headers for lambda Invoke
-        if (
-            service_name == "lambda"
-            and operation_name == "Invoke"
-            and "Payload" in api_params
+        if BotocoreInstrumentor._is_lambda_invoke(
+                service_name, operation_name, api_params
         ):
-            payload_str = api_params["Payload"]
-            payload = json.loads(payload_str)
-            headers = payload.get("headers", {})
-            inject(headers)
-            payload["headers"] = headers
-            api_params["Payload"] = json.dumps(payload)
+            BotocoreInstrumentor._patch_lambda_invoke(api_params)
 
         with self._tracer.start_as_current_span(
             "{}".format(service_name), kind=SpanKind.CLIENT,
