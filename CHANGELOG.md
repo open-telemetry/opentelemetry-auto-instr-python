@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Distros can now implement `load_instrumentor(EntryPoint)` method to customize instrumentor
   loading behaviour.
   ([#480](https://github.com/open-telemetry/opentelemetry-python/pull/480))
+- Propagators use the root context as default for `extract` and do not modify
+  the context if extracting from carrier does not work.
+  ([#488](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/488))
 
 ### Added
 - Move `opentelemetry-instrumentation` from core repository
