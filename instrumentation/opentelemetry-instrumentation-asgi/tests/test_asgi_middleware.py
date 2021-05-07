@@ -116,12 +116,12 @@ class TestAsgiApplication(AsgiTestBase):
         self.assertEqual(len(span_list), 4)
         expected = [
             {
-                "name": "GET asgi.http.receive",
+                "name": "/ http.receive",
                 "kind": trace_api.SpanKind.INTERNAL,
                 "attributes": {"type": "http.request"},
             },
             {
-                "name": "GET asgi.http.send",
+                "name": "/ http.send",
                 "kind": trace_api.SpanKind.INTERNAL,
                 "attributes": {
                     SpanAttributes.HTTP_STATUS_CODE: 200,
@@ -129,12 +129,12 @@ class TestAsgiApplication(AsgiTestBase):
                 },
             },
             {
-                "name": "GET asgi.http.send",
+                "name": "/ http.send",
                 "kind": trace_api.SpanKind.INTERNAL,
                 "attributes": {"type": "http.response.body"},
             },
             {
-                "name": "GET asgi",
+                "name": "/",
                 "kind": trace_api.SpanKind.SERVER,
                 "attributes": {
                     SpanAttributes.HTTP_METHOD: "GET",
@@ -200,9 +200,12 @@ class TestAsgiApplication(AsgiTestBase):
 
         def update_expected_span_name(expected):
             for entry in expected:
-                entry["name"] = " ".join(
-                    [span_name] + entry["name"].split(" ")[-1:]
-                )
+                if entry["kind"] == trace_api.SpanKind.SERVER:
+                    entry["name"] = span_name
+                else:
+                    entry["name"] = " ".join(
+                        [span_name] + entry["name"].split(" ")[-1:]
+                    )
             return expected
 
         app = otel_asgi.OpenTelemetryMiddleware(
@@ -303,12 +306,12 @@ class TestAsgiApplication(AsgiTestBase):
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 6)
         expected = [
-            "/ asgi.websocket.receive",
-            "/ asgi.websocket.send",
-            "/ asgi.websocket.receive",
-            "/ asgi.websocket.send",
-            "/ asgi.websocket.receive",
-            "/ asgi",
+            "/ websocket.receive",
+            "/ websocket.send",
+            "/ websocket.receive",
+            "/ websocket.send",
+            "/ websocket.receive",
+            "/",
         ]
         actual = [span.name for span in span_list]
         self.assertListEqual(actual, expected)

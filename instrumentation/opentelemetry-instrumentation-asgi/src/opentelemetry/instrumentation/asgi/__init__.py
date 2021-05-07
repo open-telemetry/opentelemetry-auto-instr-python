@@ -147,12 +147,13 @@ def get_default_span_details(scope: dict) -> Tuple[str, dict]:
         scope: the asgi scope dictionary
 
     Returns:
-        a tuple of the span, and any attributes to attach to the
-        span.
+        a tuple of the span name, and any attributes to attach to the span.
     """
-    method_or_path = scope.get("method") or scope.get("path")
+    span_name = scope.get("path", "").strip() or "HTTP {}".format(
+        scope.get("method", "").strip()
+    )
 
-    return method_or_path, {}
+    return span_name, {}
 
 
 class OpenTelemetryMiddleware:
@@ -205,7 +206,7 @@ class OpenTelemetryMiddleware:
 
         try:
             with self.tracer.start_as_current_span(
-                span_name + " asgi", kind=trace.SpanKind.SERVER,
+                span_name, kind=trace.SpanKind.SERVER,
             ) as span:
                 if span.is_recording():
                     attributes = collect_request_attributes(scope)
@@ -216,7 +217,7 @@ class OpenTelemetryMiddleware:
                 @wraps(receive)
                 async def wrapped_receive():
                     with self.tracer.start_as_current_span(
-                        span_name + " asgi." + scope["type"] + ".receive"
+                        span_name + " " + scope["type"] + ".receive"
                     ) as receive_span:
                         message = await receive()
                         if receive_span.is_recording():
@@ -228,7 +229,7 @@ class OpenTelemetryMiddleware:
                 @wraps(send)
                 async def wrapped_send(message):
                     with self.tracer.start_as_current_span(
-                        span_name + " asgi." + scope["type"] + ".send"
+                        span_name + " " + scope["type"] + ".send"
                     ) as send_span:
                         if send_span.is_recording():
                             if message["type"] == "http.response.start":
