@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Set the `traced_request_attrs` of FalconInstrumentor by an argument correctly.
   ([#473](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/473))
 - `opentelemetry-propagator-ot-trace` Fix case sensitivity when handling baggage
-  ([#484](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/484))
+  ([#485](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/485))
 
 ### Added
 - Move `opentelemetry-instrumentation` from core repository
