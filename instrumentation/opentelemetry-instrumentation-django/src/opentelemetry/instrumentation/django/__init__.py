@@ -75,6 +75,7 @@ and right before the span is finished while processing a response. The hooks can
 
 from logging import getLogger
 from os import environ
+from typing import Collection
 
 from django.conf import settings
 
@@ -85,6 +86,8 @@ from opentelemetry.instrumentation.django.middleware import _DjangoMiddleware
 from opentelemetry.instrumentation.django.version import __version__
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.trace import get_tracer
+
+from . import package as pkg
 
 _logger = getLogger(__name__)
 
@@ -98,6 +101,9 @@ class DjangoInstrumentor(BaseInstrumentor):
     _opentelemetry_middleware = ".".join(
         [_DjangoMiddleware.__module__, _DjangoMiddleware.__qualname__]
     )
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
 

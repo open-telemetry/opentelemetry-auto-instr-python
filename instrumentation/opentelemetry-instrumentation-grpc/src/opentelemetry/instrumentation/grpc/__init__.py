@@ -118,6 +118,8 @@ You can also add the instrumentor manually, rather than using
                          interceptors = [server_interceptor()])
 
 """
+from typing import Collection
+
 import grpc  # pylint:disable=import-self
 from wrapt import wrap_function_wrapper as _wrap
 
@@ -126,6 +128,8 @@ from opentelemetry.instrumentation.grpc.grpcext import intercept_channel
 from opentelemetry.instrumentation.grpc.version import __version__
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import unwrap
+
+from . import package as pkg
 
 # pylint:disable=import-outside-toplevel
 # pylint:disable=import-self
@@ -144,6 +148,9 @@ class GrpcInstrumentorServer(BaseInstrumentor):
     """
 
     # pylint:disable=attribute-defined-outside-init, redefined-outer-name
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         self._original_func = grpc.server
@@ -193,6 +200,9 @@ class GrpcInstrumentorClient(BaseInstrumentor):
                 types.append(ctype)
 
         return tuple(types)
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         for ctype in self._which_channel(kwargs):

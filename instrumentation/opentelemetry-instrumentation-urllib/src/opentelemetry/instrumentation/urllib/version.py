@@ -13,3 +13,5 @@
 # limitations under the License.
 
 __version__ = "0.21.dev0"
+
+_instruments = tuple()

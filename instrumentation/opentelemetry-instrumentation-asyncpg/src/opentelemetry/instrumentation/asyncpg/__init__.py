@@ -34,6 +34,8 @@ API
 ---
 """
 
+from typing import Collection
+
 import asyncpg
 import wrapt
 from asyncpg import exceptions
@@ -49,6 +51,8 @@ from opentelemetry.semconv.trace import (
 )
 from opentelemetry.trace import SpanKind
 from opentelemetry.trace.status import Status, StatusCode
+
+from . import package as pkg
 
 
 def _hydrate_span_from_args(connection, query, parameters) -> dict:
@@ -97,6 +101,9 @@ class AsyncPGInstrumentor(BaseInstrumentor):
         super().__init__()
         self.capture_parameters = capture_parameters
         self._tracer = None
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")

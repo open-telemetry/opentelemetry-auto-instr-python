@@ -37,6 +37,8 @@ API
 ---
 """
 
+from typing import Collection
+
 from pymongo import monitoring
 
 from opentelemetry import trace
@@ -45,6 +47,8 @@ from opentelemetry.instrumentation.pymongo.version import __version__
 from opentelemetry.semconv.trace import DbSystemValues, SpanAttributes
 from opentelemetry.trace import SpanKind, get_tracer
 from opentelemetry.trace.status import Status, StatusCode
+
+from . import package as pkg
 
 
 class CommandTracer(monitoring.CommandListener):
@@ -126,6 +130,9 @@ class PymongoInstrumentor(BaseInstrumentor):
     # an unregister API. In order to provide a mechanishm to disable
     # instrumentation an enabled flag is implemented in CommandTracer,
     # it's checked in the different listeners.
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Integrate with pymongo to trace it using event listener.

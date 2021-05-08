@@ -39,6 +39,8 @@ Usage
 API
 ---
 """
+from typing import Collection
+
 import sqlalchemy
 import wrapt
 from wrapt import wrap_function_wrapper as _w
@@ -51,11 +53,16 @@ from opentelemetry.instrumentation.sqlalchemy.engine import (
 )
 from opentelemetry.instrumentation.utils import unwrap
 
+from . import package as pkg
+
 
 class SQLAlchemyInstrumentor(BaseInstrumentor):
     """An instrumentor for SQLAlchemy
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Instruments SQLAlchemy engine creation methods and the engine

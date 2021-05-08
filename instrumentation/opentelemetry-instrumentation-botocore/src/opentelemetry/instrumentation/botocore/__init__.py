@@ -47,6 +47,7 @@ API
 """
 
 import logging
+from typing import Collection
 
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError
@@ -59,6 +60,8 @@ from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.propagate import inject
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind, get_tracer
+
+from . import package as pkg
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +79,9 @@ class BotocoreInstrumentor(BaseInstrumentor):
 
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
 

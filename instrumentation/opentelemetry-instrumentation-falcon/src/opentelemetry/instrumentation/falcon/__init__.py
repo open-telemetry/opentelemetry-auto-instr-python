@@ -92,6 +92,7 @@ API
 from functools import partial
 from logging import getLogger
 from sys import exc_info
+from typing import Collection
 
 import falcon
 
@@ -113,6 +114,8 @@ from opentelemetry.trace.status import Status
 from opentelemetry.util._time import _time_ns
 from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
 
+from . import package as pkg
+
 _logger = getLogger(__name__)
 
 _ENVIRON_STARTTIME_KEY = "opentelemetry-falcon.starttime_key"
@@ -124,7 +127,6 @@ _ENVIRON_EXC = "opentelemetry-falcon.exc"
 
 _excluded_urls = get_excluded_urls("FALCON")
 _traced_request_attrs = get_traced_request_attrs("FALCON")
-_response_propagation_setter = FuncSetter(falcon.api.Response.append_header)
 
 
 class FalconInstrumentor(BaseInstrumentor):
@@ -133,6 +135,9 @@ class FalconInstrumentor(BaseInstrumentor):
 
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         self._original_falcon_api = falcon.API
@@ -160,6 +165,9 @@ class _InstrumentedFalconAPI(falcon.API):
         )
         middlewares.insert(0, trace_middleware)
         kwargs["middleware"] = middlewares
+        self._response_propagation_setter = FuncSetter(
+            falcon.api.Response.append_header
+        )
         super().__init__(*args, **kwargs)
 
     def __call__(self, env, start_response):
@@ -283,7 +291,7 @@ class _TraceMiddleware:
 
         propagator = get_global_response_propagator()
         if propagator:
-            propagator.inject(resp, setter=_response_propagation_setter)
+            propagator.inject(resp, setter=self._response_propagation_setter)
 
         if self._response_hook:
             self._response_hook(span, req, resp)
